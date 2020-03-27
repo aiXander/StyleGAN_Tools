@@ -2,45 +2,59 @@ import os, sys, random, cv2, warnings, time, pickle, shutil, collections
 import numpy as np
 from tqdm import tqdm
 
-warnings.filterwarnings('ignore')
-sys.path.append('/home/stylegan2')  #Add stylegan2 source dir to path
-import pretrained_networks
-import dnnlib
-import dnnlib.tflib as tflib
-
-
 '''
 
 ToDo:
-- add img_path renaming
-- add option to go backwards
+- add img_path renaming (to allow restarting the script & continuing...)
+- add option to go backwards (eg relabelling an img)
+- add argparse etc...
 
 '''
 
-network_pkl1 = '/home/stylegan2/results/00037-stylegan2-micro-1gpu-cond-config-f/network-snapshot-000096.pkl'
-network_pkl2 = '/home/stylegan2/results/00038-stylegan2-micro-1gpu-cond-config-f/network-snapshot-000145.pkl'
+#################################################################################
+############################## Input Arguments ##################################
+#################################################################################
 
-label_size = 6
-n = 200
-latents = None
-#latents = 'cherries/z_dict_TATE_FINAL.pkl'
+stylegan2_source_directory = '/home/stylegan2/' #Where you cloned the StyleGAN2 GitHub repo
 
+network_pkl1 = stylegan2_source_directory + 'results/00037-stylegan2-micro-1gpu-cond-config-f/network-snapshot-000096.pkl'
+network_pkl2 = stylegan2_source_directory + 'results/00038-stylegan2-micro-1gpu-cond-config-f/network-snapshot-000145.pkl'
+
+label_size = 0   #When using a conditional model, set this to the number of conditional inputs
+n = 200          #Number of samples you want to generate to compare
+
+
+latents = None   #Sample random latents
+#latents = 'cherry-picked/z_dict_TATE_FINAL.pkl'  #A .pkl file containing some pre-picked latents
+
+img_res = (1024,1024,3)
 trunc_value = 1.0
 batch_size = 8
 _N = 512
-img_res = (1024,1024,3)
 
-dump_images    = True
-compare_images = True
+dump_images    = True   #Dump the imgs to disk
+compare_images = True   #Display the imgs sbs with opencv
 
 if not dump_images:
     dump_img_dir = 'model_compare_images/1585217910.462612/'
 else:
     dump_img_dir = 'model_compare_images/%s' %str(time.time())
-    
+
+#################################################################################
+#################################################################################
+#################################################################################
+
+try:
+    warnings.filterwarnings('ignore')
+    sys.path.append(stylegan2_source_directory)  #Add stylegan2 source dir to path
+    import pretrained_networks
+    import dnnlib
+    import dnnlib.tflib as tflib
+except:
+    raise ValueError('Make sure \'stylegan2_source_directory\' points to the directory where the StyleGAN2 repo is!')
 
 def get_latents(label_size, n, N=512):
-    type_choices = [0,1,2,3]
+    type_choices = [0,1,2,3]  #Various choices for sampling from a conditional StyleGAN model
     #type_choices = [2]
 
     z = np.empty((n,N))
@@ -116,6 +130,12 @@ def dump_imgs(model_pkl_path, target_dir, latent_vector, truncation_psi, z=True,
 
     return img_paths
 
+###################################################################
+###################################################################
+# Generate samples from the two generators:
+###################################################################
+###################################################################
+
 if dump_images:
     os.makedirs(dump_img_dir, exist_ok = False)
 
@@ -148,7 +168,7 @@ assert len(img_paths1) == len(img_paths2)
 
 ###################################################################
 ###################################################################
-#Compare the generated images visually:
+# Compare the generated images visually:
 ###################################################################
 ###################################################################
 
